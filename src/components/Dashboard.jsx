@@ -43,6 +43,31 @@ export const Dashboard = () => {
         return now > end;
     }).length;
 
+    const todayStr = new Date().toISOString().split('T')[0];
+    const behindGrants = grants.filter(g => {
+        const prog = g.progressDate.toDate();
+        prog.setHours(0, 0, 0, 0);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return prog < today;
+    }).length;
+
+    const aheadGrants = grants.filter(g => {
+        const prog = g.progressDate.toDate();
+        prog.setHours(0, 0, 0, 0);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return prog > today;
+    }).length;
+
+    const onTimeGrants = grants.filter(g => {
+        const prog = g.progressDate.toDate();
+        prog.setHours(0, 0, 0, 0);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return prog.getTime() === today.getTime();
+    }).length;
+
     if (loading) {
         return (
             <div className="loading-container">
@@ -56,7 +81,7 @@ export const Dashboard = () => {
         <div className="dashboard">
             <header className="dashboard-header">
                 <div className="header-content">
-                    <h1>📊 Grant Tracker</h1>
+                    <h1>TVSR</h1>
                     <div className="header-actions">
                         <span className="user-info">
                             👤 {userProfile?.displayName || currentUser?.email}
@@ -75,16 +100,28 @@ export const Dashboard = () => {
                 {/* Stats Cards */}
                 <div className="dashboard-stats">
                     <div className="stat-card">
-                        <div className="stat-label">Total Grants</div>
+                        <div className="stat-label">Total</div>
                         <div className="stat-value">{totalGrants}</div>
                     </div>
                     <div className="stat-card">
                         <div className="stat-label">Active</div>
-                        <div className="stat-value" style={{ color: 'var(--color-success)' }}>{activeGrants}</div>
+                        <div className="stat-value">{activeGrants}</div>
                     </div>
                     <div className="stat-card">
                         <div className="stat-label">Completed</div>
-                        <div className="stat-value" style={{ color: 'var(--color-info)' }}>{completedGrants}</div>
+                        <div className="stat-value">{completedGrants}</div>
+                    </div>
+                    <div className="stat-card status-behind">
+                        <div className="stat-label">Behind</div>
+                        <div className="stat-value">{behindGrants}</div>
+                    </div>
+                    <div className="stat-card status-ontime">
+                        <div className="stat-label">On Time</div>
+                        <div className="stat-value">{onTimeGrants}</div>
+                    </div>
+                    <div className="stat-card status-ahead">
+                        <div className="stat-label">Ahead</div>
+                        <div className="stat-value">{aheadGrants}</div>
                     </div>
                 </div>
 

@@ -20,9 +20,9 @@ export const Timeline = ({ grants, onEditGrant }) => {
     const getTimelineWidth = () => {
         switch (viewMode) {
             case 'weekly':
-                return 3000; // Very wide for weekly detail
+                return 12000; // Extreme wide for maximum weekly detail
             case 'monthly':
-                return 2400; // Wide for monthly detail
+                return 3600; // Very wide for monthly detail
             case '6months':
                 return 1800;
             case 'yearly':
@@ -42,7 +42,7 @@ export const Timeline = ({ grants, onEditGrant }) => {
             setDimensions({ width: timelineWidth, height });
         };
         updateDimensions();
-    }, [grants.length]);
+    }, [grants.length, timelineWidth]);
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -228,8 +228,10 @@ export const Timeline = ({ grants, onEditGrant }) => {
                 labelFormat = (d) => d.toLocaleDateString('en-US', { month: 'short' });
         }
 
+        let lastX = -100; // Track last label position
         while (currentDate <= scale.maxDate) {
             const x = dateToX(currentDate, scale);
+
             lines.push(
                 <line
                     key={`grid-${currentDate.getTime()}`}
@@ -240,17 +242,22 @@ export const Timeline = ({ grants, onEditGrant }) => {
                     className="calendar-grid-line"
                 />
             );
-            labels.push(
-                <text
-                    key={`label-${currentDate.getTime()}`}
-                    x={x}
-                    y={padding.top - 10}
-                    textAnchor="middle"
-                    className="calendar-label"
-                >
-                    {labelFormat(currentDate)}
-                </text>
-            );
+
+            // Only show labels if there's enough space (min 120px between labels)
+            if (x - lastX > 120) {
+                labels.push(
+                    <text
+                        key={`label-${currentDate.getTime()}`}
+                        x={x}
+                        y={padding.top - 10}
+                        textAnchor="middle"
+                        className="calendar-label"
+                    >
+                        {labelFormat(currentDate)}
+                    </text>
+                );
+                lastX = x;
+            }
             currentDate = new Date(currentDate.getTime() + interval * 24 * 60 * 60 * 1000);
         }
 
@@ -377,12 +384,20 @@ export const Timeline = ({ grants, onEditGrant }) => {
                     <div className="grant-details-popup" onClick={(e) => e.stopPropagation()}>
                         <button className="popup-close" onClick={() => setSelectedGrant(null)}>&times;</button>
                         <h3>{selectedGrant.name}</h3>
-                        {selectedGrant.description && (
-                            <p className="grant-description">{selectedGrant.description}</p>
-                        )}
                         <div className="grant-info">
+                            <div className="status-badge-container">
+                                <span className={`status-badge status-${selectedGrant.status?.toLowerCase()}`}>
+                                    {selectedGrant.status || 'Active'}
+                                </span>
+                            </div>
+                            {selectedGrant.description && (
+                                <p className="grant-description-inline"><strong>About:</strong> {selectedGrant.description}</p>
+                            )}
                             <p><strong>Start:</strong> {formatDate(selectedGrant.startDate.toDate())}</p>
                             <p><strong>End:</strong> {formatDate(selectedGrant.endDate.toDate())}</p>
+                            {selectedGrant.extendedEndDate && (
+                                <p><strong>Extended To:</strong> {formatDate(selectedGrant.extendedEndDate.toDate())}</p>
+                            )}
                             <p><strong>Progress:</strong> {formatDate(selectedGrant.progressDate.toDate())}</p>
                         </div>
                         {canEditGrant(selectedGrant) && (
@@ -394,13 +409,13 @@ export const Timeline = ({ grants, onEditGrant }) => {
                                         setSelectedGrant(null);
                                     }}
                                 >
-                                    ✏️ Edit Grant
+                                    Edit Grant
                                 </button>
                                 <button
                                     className="btn btn-danger"
                                     onClick={() => setShowDeleteConfirm(selectedGrant.id)}
                                 >
-                                    🗑️ Delete Grant
+                                    Delete Grant
                                 </button>
                             </div>
                         )}
@@ -442,11 +457,30 @@ const GrantRow = ({ grant, y, scale, dateToX, formatDate, canEdit, onMouseDown, 
     const startX = dateToX(grant.startDate.toDate(), scale);
     const endX = dateToX(grant.endDate.toDate(), scale);
     const progressX = dateToX(grant.progressDate.toDate(), scale);
+    const extendedEndX = grant.extendedEndDate ? dateToX(grant.extendedEndDate.toDate(), scale) : null;
     const barY = y + 10;
     const barHeight = rowHeight - 20;
 
+    const rowStatusClass = grant.status ? `status-${grant.status.toLowerCase()}` : '';
+
     return (
-        <g className="grant-row">
+        <g className={`grant-row ${rowStatusClass}`}>
+            {/* Extension Segment - Background (if extended) */}
+            {extendedEndX && (
+                <rect
+                    x={endX}
+                    y={barY}
+                    width={extendedEndX - endX}
+                    height={barHeight}
+                    fill={grant.color}
+                    opacity="0.15"
+                    rx="0"
+                    stroke="var(--color-border)"
+                    strokeWidth="2"
+                    strokeDasharray="4,2"
+                    className="timeline-bar-extension-bg"
+                />
+            )}
             {/* Solid color bar - background */}
             <rect
                 x={startX}
@@ -474,6 +508,21 @@ const GrantRow = ({ grant, y, scale, dateToX, formatDate, canEdit, onMouseDown, 
                     stroke="var(--color-border)"
                     strokeWidth="2"
                     className="timeline-bar-progress"
+                />
+            )}
+            {/* Extension Segment - Progress (if extended) */}
+            {extendedEndX && progressX > endX && (
+                <rect
+                    x={endX}
+                    y={barY}
+                    width={Math.min(progressX, extendedEndX) - endX}
+                    height={barHeight}
+                    fill={grant.color}
+                    opacity="0.6"
+                    rx="0"
+                    stroke="var(--color-border)"
+                    strokeWidth="2"
+                    className="timeline-bar-extension-progress"
                 />
             )}
 

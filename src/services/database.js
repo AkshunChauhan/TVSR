@@ -115,6 +115,9 @@ export const createGrant = async (grantData, currentUserId) => {
     try {
         const docRef = await addDoc(collection(db, 'grants'), {
             name: grantData.name,
+            description: grantData.description || '',
+            status: grantData.status || 'Active',
+            extendedEndDate: grantData.extendedEndDate ? Timestamp.fromDate(grantData.extendedEndDate) : null,
             startDate: Timestamp.fromDate(grantData.startDate),
             endDate: Timestamp.fromDate(grantData.endDate),
             color: grantData.color,
@@ -135,6 +138,18 @@ export const updateGrant = async (grantId, updates) => {
     try {
         const updateData = { ...updates, updatedAt: serverTimestamp() };
 
+        if (updates.name) {
+            updateData.name = updates.name;
+        }
+        if (updates.description !== undefined) {
+            updateData.description = updates.description;
+        }
+        if (updates.status) {
+            updateData.status = updates.status;
+        }
+        if (updates.extendedEndDate !== undefined) {
+            updateData.extendedEndDate = updates.extendedEndDate ? Timestamp.fromDate(updates.extendedEndDate) : null;
+        }
         if (updates.startDate) {
             updateData.startDate = Timestamp.fromDate(updates.startDate);
         }

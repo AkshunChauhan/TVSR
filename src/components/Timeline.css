@@ -102,17 +102,123 @@
 
 /* Calendar Grid */
 .calendar-grid-line {
-    stroke: var(--color-border);
-    stroke-width: 1;
-    opacity: 0.2;
+    stroke: #E0E0E0;
+    stroke-width: 1.5;
+    opacity: 1;
 }
 
 .calendar-label {
-    fill: var(--color-text-secondary);
+    fill: #000000;
     font-size: 11px;
-    font-weight: 700;
+    font-weight: 900;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+
+/* Milestone Label */
+.milestone-label {
+    fill: var(--color-text-primary);
+    font-size: 10px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+/* Grant Description */
+.grant-description-inline {
+    font-size: 1rem;
+    line-height: 1.5;
+    color: var(--color-text-secondary);
+    margin-bottom: 1.25rem !important;
+    padding-bottom: 1.25rem;
+    border-bottom: 2px dashed var(--color-border);
+    font-weight: 500;
+}
+
+.grant-description-inline strong {
+    color: var(--color-accent);
+}
+
+/* Status Badges */
+.status-badge-container {
+    margin-bottom: 1rem;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border: 3px solid var(--color-border);
+    font-size: 0.875rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 4px 4px 0px var(--color-border);
+}
+
+.status-active {
+    background-color: var(--color-success);
+    color: #1A1A1A;
+}
+
+.status-completed {
+    background-color: var(--color-cyan);
+    color: #1A1A1A;
+}
+
+.status-stuck {
+    background-color: var(--color-warning);
+    color: #1A1A1A;
+}
+
+.status-cancelled {
+    background-color: var(--color-error);
+    color: #FFFFFF;
+}
+
+.status-extended {
+    background-color: var(--color-purple);
+    color: #FFFFFF;
+}
+
+/* Status-based Row Effects */
+.grant-row.status-cancelled {
+    filter: grayscale(0.8);
+    opacity: 0.6;
+}
+
+.grant-row.status-stuck .timeline-bar-progress,
+.grant-row.status-stuck .timeline-bar-bg {
+    animation: stuckPulse 2s infinite;
+}
+
+@keyframes stuckPulse {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.6;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+.grant-row.status-completed {
+    filter: saturate(1.2);
+}
+
+.grant-row.status-completed .timeline-bar-progress {
+    stroke-width: 4;
+}
+
+/* Extension Markers */
+.timeline-bar-extension-bg {
+    stroke-dasharray: 6, 4;
+}
+
+.timeline-bar-extension-progress {
+    stroke-dasharray: 0;
 }
 
 /* Date Tooltip */

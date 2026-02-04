@@ -15,6 +15,9 @@ export const GrantModal = ({ onClose, grant = null }) => {
 
     const [formData, setFormData] = useState({
         name: grant?.name || '',
+        description: grant?.description || '',
+        status: grant?.status || 'Active',
+        extendedEndDate: grant?.extendedEndDate ? grant.extendedEndDate.toDate().toISOString().split('T')[0] : '',
         startDate: grant?.startDate ? grant.startDate.toDate().toISOString().split('T')[0] : '',
         endDate: grant?.endDate ? grant.endDate.toDate().toISOString().split('T')[0] : '',
         assignedUsers: grant?.assignedUsers || [currentUser?.uid],
@@ -79,18 +82,26 @@ export const GrantModal = ({ onClose, grant = null }) => {
             if (!formData.name || !formData.startDate || !formData.endDate) {
                 throw new Error('Please fill in all required fields');
             }
-
             const startDate = new Date(formData.startDate);
             const endDate = new Date(formData.endDate);
+            const extendedEndDate = formData.status === 'Extended' && formData.extendedEndDate ? new Date(formData.extendedEndDate) : null;
 
-            if (endDate <= startDate) {
-                throw new Error('End date must be after start date');
+            if (endDate < startDate) {
+                alert('End date must be after start date!');
+                return;
             }
 
+            if (extendedEndDate && extendedEndDate < endDate) {
+                alert('Extended end date must be after the original end date!');
+                return;
+            }
             if (grant) {
                 // Update existing grant
                 await updateGrant(grant.id, {
                     name: formData.name,
+                    description: formData.description,
+                    status: formData.status,
+                    extendedEndDate,
                     startDate,
                     endDate,
                     assignedUsers: formData.assignedUsers
@@ -119,6 +130,9 @@ export const GrantModal = ({ onClose, grant = null }) => {
                 const color = colorGenerator.getColorForGrant(Date.now().toString(), isDark);
                 const grantData = {
                     name: formData.name,
+                    description: formData.description,
+                    status: formData.status,
+                    extendedEndDate,
                     startDate,
                     endDate,
                     color,
@@ -168,6 +182,48 @@ export const GrantModal = ({ onClose, grant = null }) => {
                             placeholder="e.g., Research Grant 2026"
                             required
                         />
+                    </div>
+
+                    <div className="form-group">
+                        <label htmlFor="description">Description</label>
+                        <textarea
+                            id="description"
+                            name="description"
+                            value={formData.description}
+                            onChange={handleChange}
+                            placeholder="Briefly explain what this grant is for..."
+                            rows="3"
+                        />
+                    </div>
+
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label htmlFor="status">Status</label>
+                            <select
+                                id="status"
+                                name="status"
+                                value={formData.status}
+                                onChange={handleChange}
+                                className="form-select"
+                            >
+                                <option value="Active">Active</option>
+                                <option value="Stuck">Stuck</option>
+                                <option value="Cancelled">Cancelled</option>
+                                <option value="Extended">Extended</option>
+                            </select>
+                        </div>
+                        {formData.status === 'Extended' && (
+                            <div className="form-group">
+                                <label htmlFor="extendedEndDate">Extended End Date</label>
+                                <input
+                                    type="date"
+                                    id="extendedEndDate"
+                                    name="extendedEndDate"
+                                    value={formData.extendedEndDate}
+                                    onChange={handleChange}
+                                />
+                            </div>
+                        )}
                     </div>
 
                     <div className="form-row">
