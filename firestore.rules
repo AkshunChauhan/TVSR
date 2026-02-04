@@ -1,0 +1,49 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+    
+    function isAssignedToGrant(grantId) {
+      return isAuthenticated() && 
+             request.auth.uid in get(/databases/$(database)/documents/grants/$(grantId)).data.assignedUsers;
+    }
+    
+    // Invites collection - for invite-only signup
+    match /invites/{email} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isAuthenticated() && request.auth.uid == userId;
+      allow delete: if isAdmin();
+    }
+    
+    // Grants collection
+    match /grants/{grantId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && 
+                      request.resource.data.createdBy == request.auth.uid;
+      allow update: if isAssignedToGrant(grantId);
+      allow delete: if isAuthenticated() && 
+                      (resource.data.createdBy == request.auth.uid || isAdmin());
+      
+      // Milestones subcollection
+      match /milestones/{milestoneId} {
+        allow read: if isAuthenticated();
+        allow create, update, delete: if isAssignedToGrant(grantId);
+      }
+    }
+  }
+}
