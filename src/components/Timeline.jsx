@@ -9,7 +9,7 @@ export const Timeline = ({ grants, onEditGrant }) => {
     const timelineRef = useRef(null);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     const [dragState, setDragState] = useState({ isDragging: false, grantId: null });
-    const [selectedGrant, setSelectedGrant] = useState(null);
+    const [selectedGrantId, setSelectedGrantId] = useState(null);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
     const [viewMode, setViewMode] = useState('monthly'); // weekly, monthly, 6months, yearly
     const [hoveredDate, setHoveredDate] = useState(null);
@@ -167,7 +167,7 @@ export const Timeline = ({ grants, onEditGrant }) => {
         try {
             await deleteGrant(grantId);
             setShowDeleteConfirm(null);
-            setSelectedGrant(null);
+            setSelectedGrantId(null);
         } catch (error) {
             alert('Failed to delete grant: ' + error.message);
         }
@@ -305,7 +305,7 @@ export const Timeline = ({ grants, onEditGrant }) => {
                             key={grant.id}
                             className="grant-name-item"
                             style={{ height: `${rowHeight}px`, marginBottom: `${rowGap}px` }}
-                            onClick={() => setSelectedGrant(grant)}
+                            onClick={() => setSelectedGrantId(grant.id)}
                         >
                             <span className="grant-name-text">{grant.name}</span>
                         </div>
@@ -379,49 +379,54 @@ export const Timeline = ({ grants, onEditGrant }) => {
             </div>
 
             {/* Grant Details Popup */}
-            {selectedGrant && (
-                <div className="grant-details-overlay" onClick={() => setSelectedGrant(null)}>
-                    <div className="grant-details-popup" onClick={(e) => e.stopPropagation()}>
-                        <button className="popup-close" onClick={() => setSelectedGrant(null)}>&times;</button>
-                        <h3>{selectedGrant.name}</h3>
-                        <div className="grant-info">
-                            <div className="status-badge-container">
-                                <span className={`status-badge status-${selectedGrant.status?.toLowerCase()}`}>
-                                    {selectedGrant.status || 'Active'}
-                                </span>
+            {(() => {
+                const selectedGrant = grants.find(g => g.id === selectedGrantId);
+                if (!selectedGrant) return null;
+
+                return (
+                    <div className="grant-details-overlay" onClick={() => setSelectedGrantId(null)}>
+                        <div className="grant-details-popup" onClick={(e) => e.stopPropagation()}>
+                            <button className="popup-close" onClick={() => setSelectedGrantId(null)}>&times;</button>
+                            <h3>{selectedGrant.name}</h3>
+                            <div className="grant-info">
+                                <div className="status-badge-container">
+                                    <span className={`status-badge status-${selectedGrant.status?.toLowerCase()}`}>
+                                        {selectedGrant.status || 'Active'}
+                                    </span>
+                                </div>
+                                {selectedGrant.description && (
+                                    <p className="grant-description-inline"><strong>About:</strong> {selectedGrant.description}</p>
+                                )}
+                                <p><strong>Start:</strong> {formatDate(selectedGrant.startDate.toDate())}</p>
+                                <p><strong>End:</strong> {formatDate(selectedGrant.endDate.toDate())}</p>
+                                {selectedGrant.extendedEndDate && (
+                                    <p><strong>Extended To:</strong> {formatDate(selectedGrant.extendedEndDate.toDate())}</p>
+                                )}
+                                <p><strong>Progress:</strong> {formatDate(selectedGrant.progressDate.toDate())}</p>
                             </div>
-                            {selectedGrant.description && (
-                                <p className="grant-description-inline"><strong>About:</strong> {selectedGrant.description}</p>
+                            {canEditGrant(selectedGrant) && (
+                                <div className="grant-actions">
+                                    <button
+                                        className="btn btn-primary"
+                                        onClick={() => {
+                                            onEditGrant(selectedGrant);
+                                            setSelectedGrantId(null);
+                                        }}
+                                    >
+                                        Edit Grant
+                                    </button>
+                                    <button
+                                        className="btn btn-danger"
+                                        onClick={() => setShowDeleteConfirm(selectedGrant.id)}
+                                    >
+                                        Delete Grant
+                                    </button>
+                                </div>
                             )}
-                            <p><strong>Start:</strong> {formatDate(selectedGrant.startDate.toDate())}</p>
-                            <p><strong>End:</strong> {formatDate(selectedGrant.endDate.toDate())}</p>
-                            {selectedGrant.extendedEndDate && (
-                                <p><strong>Extended To:</strong> {formatDate(selectedGrant.extendedEndDate.toDate())}</p>
-                            )}
-                            <p><strong>Progress:</strong> {formatDate(selectedGrant.progressDate.toDate())}</p>
                         </div>
-                        {canEditGrant(selectedGrant) && (
-                            <div className="grant-actions">
-                                <button
-                                    className="btn btn-primary"
-                                    onClick={() => {
-                                        onEditGrant(selectedGrant);
-                                        setSelectedGrant(null);
-                                    }}
-                                >
-                                    Edit Grant
-                                </button>
-                                <button
-                                    className="btn btn-danger"
-                                    onClick={() => setShowDeleteConfirm(selectedGrant.id)}
-                                >
-                                    Delete Grant
-                                </button>
-                            </div>
-                        )}
                     </div>
-                </div>
-            )}
+                );
+            })()}
 
             {/* Delete Confirmation Popup */}
             {showDeleteConfirm && (

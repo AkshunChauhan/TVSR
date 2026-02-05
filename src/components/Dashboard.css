@@ -52,10 +52,24 @@
 
 .dashboard-main {
     flex: 1;
-    padding: 2.5rem;
-    max-width: 1600px;
+    padding: 2rem;
+    max-width: 100%;
     width: 100%;
-    margin: 0 auto;
+    margin: 0;
+    overflow-x: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dashboard-layout {
+    display: flex;
+    flex: 1;
+    height: calc(100vh - 85px);
+    overflow: hidden;
+    position: relative;
+}
+
+.dashboard-layout.sidebar-collapsed .dashboard-main {
+    padding-left: 1rem;
 }
 
 .dashboard-stats {

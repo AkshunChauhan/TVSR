@@ -6,20 +6,29 @@ import { useTheme } from '../hooks/useTheme';
 import { useMilestones } from '../hooks/useMilestones';
 import './GrantModal.css';
 
-export const GrantModal = ({ onClose, grant = null }) => {
+export const GrantModal = ({ onClose, boardId, grant = null }) => {
     const { currentUser } = useAuth();
     const isDark = useTheme();
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(false);
     const { milestones: existingMilestones } = useMilestones(grant?.id);
 
+    const formatDateForInput = (timestamp) => {
+        if (!timestamp) return '';
+        const date = timestamp.toDate();
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
     const [formData, setFormData] = useState({
         name: grant?.name || '',
         description: grant?.description || '',
         status: grant?.status || 'Active',
-        extendedEndDate: grant?.extendedEndDate ? grant.extendedEndDate.toDate().toISOString().split('T')[0] : '',
-        startDate: grant?.startDate ? grant.startDate.toDate().toISOString().split('T')[0] : '',
-        endDate: grant?.endDate ? grant.endDate.toDate().toISOString().split('T')[0] : '',
+        extendedEndDate: formatDateForInput(grant?.extendedEndDate),
+        startDate: formatDateForInput(grant?.startDate),
+        endDate: formatDateForInput(grant?.endDate),
         assignedUsers: grant?.assignedUsers || [currentUser?.uid],
     });
     const [milestones, setMilestones] = useState([]);
@@ -37,7 +46,7 @@ export const GrantModal = ({ onClose, grant = null }) => {
             setMilestones(existingMilestones.map(m => ({
                 id: m.id,
                 number: m.number,
-                targetDate: m.targetDate.toDate().toISOString().split('T')[0],
+                targetDate: formatDateForInput(m.targetDate),
                 label: m.label || ''
             })));
         }
@@ -82,9 +91,16 @@ export const GrantModal = ({ onClose, grant = null }) => {
             if (!formData.name || !formData.startDate || !formData.endDate) {
                 throw new Error('Please fill in all required fields');
             }
-            const startDate = new Date(formData.startDate);
-            const endDate = new Date(formData.endDate);
-            const extendedEndDate = formData.status === 'Extended' && formData.extendedEndDate ? new Date(formData.extendedEndDate) : null;
+
+            const parseInputDate = (dateStr) => {
+                if (!dateStr) return null;
+                const [year, month, day] = dateStr.split('-').map(Number);
+                return new Date(year, month - 1, day);
+            };
+
+            const startDate = parseInputDate(formData.startDate);
+            const endDate = parseInputDate(formData.endDate);
+            const extendedEndDate = formData.status === 'Extended' ? parseInputDate(formData.extendedEndDate) : null;
 
             if (endDate < startDate) {
                 alert('End date must be after start date!');
@@ -113,13 +129,13 @@ export const GrantModal = ({ onClose, grant = null }) => {
                         if (milestone.id) {
                             await updateMilestone(grant.id, milestone.id, {
                                 number: milestone.number,
-                                targetDate: new Date(milestone.targetDate),
+                                targetDate: parseInputDate(milestone.targetDate),
                                 label: milestone.label
                             });
                         } else {
                             await addMilestone(grant.id, {
                                 number: milestone.number,
-                                targetDate: new Date(milestone.targetDate),
+                                targetDate: parseInputDate(milestone.targetDate),
                                 label: milestone.label
                             });
                         }
@@ -129,6 +145,7 @@ export const GrantModal = ({ onClose, grant = null }) => {
                 // Create new grant
                 const color = colorGenerator.getColorForGrant(Date.now().toString(), isDark);
                 const grantData = {
+                    boardId,
                     name: formData.name,
                     description: formData.description,
                     status: formData.status,
@@ -147,7 +164,7 @@ export const GrantModal = ({ onClose, grant = null }) => {
                     if (milestone.targetDate) {
                         await addMilestone(grantId, {
                             number: milestone.number,
-                            targetDate: new Date(milestone.targetDate),
+                            targetDate: parseInputDate(milestone.targetDate),
                             label: milestone.label
                         });
                     }

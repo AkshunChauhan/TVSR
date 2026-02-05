@@ -1,0 +1,48 @@
+.type-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.type-btn {
+    padding: 1rem;
+    background-color: var(--color-bg-tertiary);
+    border: 3px solid var(--color-border);
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 4px 4px 0px var(--color-border);
+}
+
+.type-btn.active {
+    background-color: var(--color-warning);
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0px var(--color-border);
+}
+
+.user-list {
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 1rem;
+    background-color: var(--color-bg-tertiary);
+    border: 3px solid var(--color-border);
+    box-shadow: inset 4px 4px 0px rgba(0, 0, 0, 0.1);
+}
+
+.user-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0.5rem;
+    border-bottom: 2px solid var(--color-border);
+    cursor: pointer;
+}
+
+.user-checkbox:last-child {
+    border-bottom: none;
+}
+
+.user-checkbox:hover {
+    background-color: var(--color-info);
+}

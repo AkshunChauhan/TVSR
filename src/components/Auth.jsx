@@ -58,7 +58,7 @@ export const Auth = () => {
             <div className="auth-container">
                 <div className="auth-card">
                     <h1 className="auth-title">Grant Tracker</h1>
-                    <p className="auth-subtitle">Visualize project timelines and track progress</p>
+                    <p className="auth-subtitle">Visualize grant timelines and track progress</p>
 
                     <form onSubmit={handleSubmit} className="auth-form">
                         <h2>{isLogin ? 'Sign In' : 'Create Account'}</h2>

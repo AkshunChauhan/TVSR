@@ -10,13 +10,17 @@ service cloud.firestore {
       return isAuthenticated() && 
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
-    
-    function isAssignedToGrant(grantId) {
-      return isAuthenticated() && 
-             request.auth.uid in get(/databases/$(database)/documents/grants/$(grantId)).data.assignedUsers;
+
+    function hasBoardAccess(boardId) {
+      let board = get(/databases/$(database)/documents/boards/$(boardId)).data;
+      return isAuthenticated() && (
+        board.ownerId == request.auth.uid || 
+        request.auth.uid in board.collaborators || 
+        isAdmin()
+      );
     }
     
-    // Invites collection - for invite-only signup
+    // Invites collection
     match /invites/{email} {
       allow read: if true;
       allow create, update, delete: if isAdmin();
@@ -26,23 +30,32 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && request.auth.uid == userId;
-      allow update: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
       allow delete: if isAdmin();
+    }
+
+    // Boards collection
+    match /boards/{boardId} {
+      allow read, update: if isAuthenticated() && (
+        resource.data.ownerId == request.auth.uid || 
+        request.auth.uid in resource.data.collaborators || 
+        isAdmin()
+      );
+      allow create: if isAuthenticated();
+      allow delete: if isAuthenticated() && (resource.data.ownerId == request.auth.uid || isAdmin());
     }
     
     // Grants collection
     match /grants/{grantId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && 
-                      request.resource.data.createdBy == request.auth.uid;
-      allow update: if isAssignedToGrant(grantId);
-      allow delete: if isAuthenticated() && 
-                      (resource.data.createdBy == request.auth.uid || isAdmin());
+      allow read: if isAuthenticated() && hasBoardAccess(resource.data.boardId);
+      allow create: if isAuthenticated() && hasBoardAccess(request.resource.data.boardId);
+      allow update: if isAuthenticated() && hasBoardAccess(resource.data.boardId);
+      allow delete: if isAuthenticated() && (resource.data.createdBy == request.auth.uid || hasBoardAccess(resource.data.boardId) || isAdmin());
       
       // Milestones subcollection
       match /milestones/{milestoneId} {
-        allow read: if isAuthenticated();
-        allow create, update, delete: if isAssignedToGrant(grantId);
+        allow read: if isAuthenticated() && hasBoardAccess(get(/databases/$(database)/documents/grants/$(grantId)).data.boardId);
+        allow create, update, delete: if isAuthenticated() && hasBoardAccess(get(/databases/$(database)/documents/grants/$(grantId)).data.boardId);
       }
     }
   }

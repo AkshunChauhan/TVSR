@@ -11,7 +11,9 @@ import {
     orderBy,
     onSnapshot,
     serverTimestamp,
-    Timestamp
+    Timestamp,
+    where,
+    limit
 } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -93,8 +95,14 @@ export const getAllUsers = async () => {
 
 // ============ GRANT OPERATIONS ============
 
-export const subscribeToGrants = (callback) => {
-    const q = query(collection(db, 'grants'), orderBy('startDate', 'asc'));
+export const subscribeToGrants = (boardId, callback) => {
+    if (!boardId) return () => { };
+
+    const q = query(
+        collection(db, 'grants'),
+        where('boardId', '==', boardId),
+        orderBy('startDate', 'asc')
+    );
 
     return onSnapshot(q,
         (snapshot) => {
@@ -113,7 +121,10 @@ export const subscribeToGrants = (callback) => {
 
 export const createGrant = async (grantData, currentUserId) => {
     try {
+        if (!grantData.boardId) throw new Error('Board ID is required');
+
         const docRef = await addDoc(collection(db, 'grants'), {
+            boardId: grantData.boardId,
             name: grantData.name,
             description: grantData.description || '',
             status: grantData.status || 'Active',
@@ -255,4 +266,113 @@ export const deleteMilestone = async (grantId, milestoneId) => {
         console.error('Error deleting milestone:', error);
         throw error;
     }
+};
+
+// ============ BOARD OPERATIONS ============
+
+export const subscribeToBoards = (currentUserId, callback) => {
+    const personalQuery = query(
+        collection(db, 'boards'),
+        where('ownerId', '==', currentUserId)
+    );
+
+    const sharedQuery = query(
+        collection(db, 'boards'),
+        where('collaborators', 'array-contains', currentUserId)
+    );
+
+    let personalBoards = [];
+    let sharedBoards = [];
+
+    const updateCallback = () => {
+        callback([...personalBoards, ...sharedBoards]);
+    };
+
+    const unsubPersonal = onSnapshot(personalQuery, (snapshot) => {
+        personalBoards = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        updateCallback();
+    });
+
+    const unsubShared = onSnapshot(sharedQuery, (snapshot) => {
+        sharedBoards = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        updateCallback();
+    });
+
+    return () => {
+        unsubPersonal();
+        unsubShared();
+    };
+};
+
+export const createBoard = async (boardData, currentUserId) => {
+    try {
+        const docRef = await addDoc(collection(db, 'boards'), {
+            name: boardData.name,
+            type: boardData.type || 'personal', // 'personal' or 'shared'
+            ownerId: currentUserId,
+            collaborators: boardData.type === 'shared' ? (boardData.collaborators || []) : [],
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+        });
+        return docRef.id;
+    } catch (error) {
+        console.error('Error creating board:', error);
+        throw error;
+    }
+};
+
+export const updateBoard = async (boardId, updates) => {
+    try {
+        await updateDoc(doc(db, 'boards', boardId), {
+            ...updates,
+            updatedAt: serverTimestamp()
+        });
+    } catch (error) {
+        console.error('Error updating board:', error);
+        throw error;
+    }
+};
+
+export const deleteBoard = async (boardId) => {
+    try {
+        // Delete all grants on this board first
+        const grantsQuery = query(collection(db, 'grants'), where('boardId', '==', boardId));
+        const grantsSnapshot = await getDocs(grantsQuery);
+        const deletePromises = grantsSnapshot.docs.map(doc => deleteDoc(doc.ref));
+        await Promise.all(deletePromises);
+
+        await deleteDoc(doc(db, 'boards', boardId));
+    } catch (error) {
+        console.error('Error deleting board:', error);
+        throw error;
+    }
+};
+
+// Migration Helper & Default Board
+export const ensureDefaultBoard = async (currentUserId) => {
+    const q = query(
+        collection(db, 'boards'),
+        where('ownerId', '==', currentUserId),
+        limit(1)
+    );
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty) {
+        // Create first board
+        const boardId = await createBoard({
+            name: 'My Workspace',
+            type: 'personal'
+        }, currentUserId);
+
+        // Migrate orphans (grants without boardId)
+        const orphanQuery = query(collection(db, 'grants'), where('createdBy', '==', currentUserId));
+        const orphanSnapshot = await getDocs(orphanQuery);
+        const migratePromises = orphanSnapshot.docs
+            .filter(d => !d.data().boardId)
+            .map(d => updateDoc(d.ref, { boardId }));
+        await Promise.all(migratePromises);
+
+        return boardId;
+    }
+    return snapshot.docs[0].id;
 };
